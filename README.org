@@ -1,0 +1,10 @@
+Gorn is a wrapper around dmenu. It's like dmenu_run with history. It tries to be fast.
+
+* Todo
+** prune old paths from the cache
+** prune non-executables from the history
+** pass arguments along to dmenu
+** create the cache dir if it doesn't exist
+** use the freedesktop spec for finding the cache dir
+* Bugs
+** arguments aren't working
