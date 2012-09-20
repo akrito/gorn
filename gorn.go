@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/ugorji/go-msgpack"
 	"io/ioutil"
+	"log"
 	"os"
 	"os/exec"
 	"strings"
@@ -65,7 +66,6 @@ func main() {
 
 	var input []string
 	// print previous input in order ...
-	// TODO: ... if the executables exist (this is duplicating work)
 	for _, exec := range cache.History {
 		input = append(input, exec)
 	}
@@ -82,13 +82,18 @@ func main() {
 	dmenuBytes, _ := dmenu.Output()
 	dmenuOut := strings.TrimSpace(string(dmenuBytes))
 
+
 	if dmenuOut == "" {
-		os.Exit(1)
+		return
 	}
 
 	// run it, without a shell
 	progParts := strings.Split(dmenuOut, " ")
-  	prog := exec.Command(progParts[0], progParts[1:]...)
+	path, err := exec.LookPath(progParts[0])
+	if err != nil {
+		log.Fatal("executable not found in path")
+	}
+  	prog := exec.Command(path, progParts[1:]...)
 	prog.Start()
 
 	// add to beginning of list
