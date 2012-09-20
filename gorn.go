@@ -82,11 +82,6 @@ func main() {
 	dmenuBytes, _ := dmenu.Output()
 	dmenuOut := strings.TrimSpace(string(dmenuBytes))
 
-
-	if dmenuOut == "" {
-		return
-	}
-
 	// run it, without a shell
 	progParts := strings.Split(dmenuOut, " ")
 	path, err := exec.LookPath(progParts[0])
