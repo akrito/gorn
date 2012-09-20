@@ -76,7 +76,7 @@ func main() {
 	reader := strings.NewReader(inputJoined)
 
 	// get dmenu output
-	dmenu := exec.Command("dmenu")
+	dmenu := exec.Command("dmenu", os.Args[1:]...)
 	dmenu.Stdin = reader
 	dmenuBytes, _ := dmenu.Output()
 	dmenuOut := strings.TrimSpace(string(dmenuBytes))
@@ -87,8 +87,7 @@ func main() {
 
 	// run it, without a shell
 	progParts := strings.Split(dmenuOut, " ")
-  	prog := exec.Command(progParts[0])
-	prog.Args = progParts
+  	prog := exec.Command(progParts[0], progParts[1:]...)
 	prog.Start()
 
 	// add to beginning of list
