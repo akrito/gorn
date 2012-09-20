@@ -1,14 +1,14 @@
 package main
 
 import (
-	"encoding/gob"
+	"github.com/ugorji/go-msgpack"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"strings"
 )
 
-type JsonCache struct {
+type Cache struct {
 	Paths   map[string]Path
 	History []string
 }
@@ -22,11 +22,11 @@ type Path struct {
 func main() {
 	// Where's the cache?
 	home := os.Getenv("HOME")
-	cacheName := home + "/.cache/gorn.gob"
+	cacheName := home + "/.cache/gorn.msgpack"
 	// Read the cache
 	in, _ := os.Open(cacheName)
-	dec := gob.NewDecoder(in)
-	var cache JsonCache
+	dec := msgpack.NewDecoder(in, nil)
+	var cache Cache
 	dec.Decode(&cache)
 
 	// Check timestamps of everything on $PATH. If the timestamp is newer,
@@ -105,7 +105,7 @@ func main() {
 	// serialize previous input list and write
 	// serialize paths and write
 	out, _ := os.Create(cacheName)
-	enc := gob.NewEncoder(out)
+	enc := msgpack.NewEncoder(out)
 	enc.Encode(&cache)
 }
 
