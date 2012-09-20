@@ -88,7 +88,7 @@ func main() {
 	if err != nil {
 		log.Fatal("executable not found in path")
 	}
-  	prog := exec.Command(path, progParts[1:]...)
+	prog := exec.Command(path, progParts[1:]...)
 	prog.Start()
 
 	// add to beginning of list
