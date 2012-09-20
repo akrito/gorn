@@ -87,8 +87,8 @@ func main() {
 
 	// run it, without a shell
 	progParts := strings.Split(dmenuOut, " ")
-	prog := exec.Command(progParts[0])
-	prog.Args = progParts[1:]
+  	prog := exec.Command(progParts[0])
+	prog.Args = progParts
 	prog.Start()
 
 	// add to beginning of list
