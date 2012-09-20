@@ -1,7 +1,7 @@
 package main
 
 import (
-	"encoding/json"
+	"encoding/gob"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -20,13 +20,14 @@ type Path struct {
 }
 
 func main() {
-	// Read cache
+	// Where's the cache?
 	home := os.Getenv("HOME")
-	cacheName := home + "/.cache/dorunrun.json"
-	// TODO: mkdir -p $HOME/.cache
-	file, _ := ioutil.ReadFile(cacheName)
+	cacheName := home + "/.cache/gorn.gob"
+	// Read the cache
+	in, _ := os.Open(cacheName)
+	dec := gob.NewDecoder(in)
 	var cache JsonCache
-	json.Unmarshal(file, &cache)
+	dec.Decode(&cache)
 
 	// Check timestamps of everything on $PATH. If the timestamp is newer,
 	// regenerate that path
@@ -103,8 +104,9 @@ func main() {
 
 	// serialize previous input list and write
 	// serialize paths and write
-	data, _ := json.Marshal(cache)
-	ioutil.WriteFile(cacheName, data, 0644)
+	out, _ := os.Create(cacheName)
+	enc := gob.NewEncoder(out)
+	enc.Encode(&cache)
 }
 
 func regenerate(pathname string) Path {
