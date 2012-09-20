@@ -3,8 +3,7 @@
 * Todo
   - prune old paths from the cache
   - prune non-executables from the history
-  - pass arguments along to dmenu
-  - create the cache dir if it doesn't exist
-  - use the freedesktop spec for finding the cache dir
+  - use gob instead of JSON for speed
 * Bugs
-  - arguments aren't working
+  - should use the freedesktop spec for finding the cache dir
+  - should create the cache dir if it doesn't exist
