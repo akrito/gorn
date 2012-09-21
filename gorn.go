@@ -43,8 +43,10 @@ func main() {
 	pathEnv := os.Getenv("PATH")
 	paths := strings.Split(pathEnv, ":")
 	for _, path := range paths {
-		// TODO: compensate for missing paths
-		fi, _ := os.Stat(path)
+		fi, e := os.Stat(path)
+		if e != nil {
+			continue
+		}
 		mtime := fi.ModTime().Unix()
 		if cache.Paths[path].Mtime != mtime {
 			// Regenerate path
