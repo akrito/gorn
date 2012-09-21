@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 )
 
@@ -22,8 +23,15 @@ type Path struct {
 
 func main() {
 	// Where's the cache?
-	home := os.Getenv("HOME")
-	cacheName := home + "/.cache/gorn.msgpack"
+	cacheDir := os.Getenv("XDG_CACHE_HOME")
+	if cacheDir == "" {
+		cacheDir = filepath.Join(os.Getenv("HOME"), ".cache")
+	}
+
+	// Per the freedesktop spec, non-existent directories should be created 0700
+	os.MkdirAll(cacheDir, 0700)
+	cacheName := filepath.Join(cacheDir, "gorn.msgpack")
+
 	// Read the cache
 	in, _ := os.Open(cacheName)
 	dec := msgpack.NewDecoder(in, nil)
