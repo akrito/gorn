@@ -1,6 +1,6 @@
 * GO RuN
   Gorn is a wrapper around dmenu. It's like dmenu_run with history. It tries to be fast.
-* Todo
-* Bugs
-  - should use the freedesktop spec for finding the cache dir
-  - should create the cache dir if it doesn't exist
+* Future Ideas?
+  - add duckduckgo bang shortcuts (e.g. !wa cost of living in mountain view, ca)
+  - pass the command through sh first
+  - quick way to pass x selection into a command (e.g. |plumb)
