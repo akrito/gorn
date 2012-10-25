@@ -38,11 +38,21 @@ func main() {
 	var cache Cache
 	dec.Decode(&cache)
 
+	candidates := make(map[string]string)
+	// Populate history map
+	historyMap := make(map[string]int)
+	for i, exec := range cache.History {
+		historyMap[exec] = i
+	}
+
 	// Check timestamps of everything on $PATH. If the timestamp is newer,
 	// regenerate that path
 	pathEnv := os.Getenv("PATH")
 	paths := strings.Split(pathEnv, ":")
 	for _, path := range paths {
+		if path == "." {
+			continue
+		}
 		fi, e := os.Stat(path)
 		if e != nil {
 			continue
@@ -55,23 +65,16 @@ func main() {
 			}
 			cache.Paths[path] = regenerate(path)
 		}
-	}
 
-	candidates := make(map[string]string)
-	// Populate history map
-	historyMap := make(map[string]int)
-	for i, exec := range cache.History {
-		historyMap[exec] = i
-	}
-	// For executables in the paths dictionary
-	for _, path := range cache.Paths {
-		for _, exec := range path.Execs {
+		// now that the cache is up-to-date, read it and add to candidates
+		for _, exec := range cache.Paths[path].Execs {
 			// if it's not in previous input
 			if _, ok := historyMap[exec]; !ok {
 				// add it to candidates
 				candidates[exec] = exec
 			}
 		}
+
 	}
 
 	var input []string
@@ -111,12 +114,28 @@ func main() {
 		cache.History = append(before, after...)
 	}
 	cache.History = append(newHistory, cache.History...)
+	cache.History = cleanHistory(cache.History)
 
 	// serialize previous input list and write
 	// serialize paths and write
 	out, _ := os.Create(cacheName)
 	enc := msgpack.NewEncoder(out)
 	enc.Encode(&cache)
+}
+
+func cleanHistory(oldHistory []string) []string {
+	// remove dead entries before serialization
+	var cleanHistory []string
+	for _, command := range oldHistory {
+		executable := strings.Split(command, " ")[0]
+		_, err := exec.LookPath(executable)
+		if err != nil {
+			log.Printf("Pruning lost command: %s\n", command)
+			continue
+		}
+		cleanHistory = append(cleanHistory, command)
+	}
+	return cleanHistory
 }
 
 func regenerate(pathname string) Path {
