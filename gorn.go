@@ -21,7 +21,7 @@ type Path struct {
 	Mtime int64
 }
 
-func main() {
+func (cache *Cache) where() string {
 	// Where's the cache?
 	cacheDir := os.Getenv("XDG_CACHE_HOME")
 	if cacheDir == "" {
@@ -32,11 +32,32 @@ func main() {
 	os.MkdirAll(cacheDir, 0700)
 	cacheName := filepath.Join(cacheDir, "gorn.msgpack")
 
+	return cacheName
+}
+
+func (cache *Cache) Write() {
+	cacheName := cache.where()
+
+	// serialize previous input list and write
+	// serialize paths and write
+	out, _ := os.Create(cacheName)
+	enc := msgpack.NewEncoder(out)
+	enc.Encode(&cache)
+}
+
+func (cache *Cache) Read() {
+	cacheName := cache.where()
+
 	// Read the cache
 	in, _ := os.Open(cacheName)
 	dec := msgpack.NewDecoder(in, nil)
-	var cache Cache
 	dec.Decode(&cache)
+}
+
+func main() {
+
+	var cache Cache
+	cache.Read()
 
 	candidates := make(map[string]string)
 	// Populate history map
@@ -116,11 +137,7 @@ func main() {
 	cache.History = append(newHistory, cache.History...)
 	cache.History = cleanHistory(cache.History)
 
-	// serialize previous input list and write
-	// serialize paths and write
-	out, _ := os.Create(cacheName)
-	enc := msgpack.NewEncoder(out)
-	enc.Encode(&cache)
+	cache.Write()
 }
 
 func cleanHistory(oldHistory []string) []string {
