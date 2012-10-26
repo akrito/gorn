@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/ugorji/go-msgpack"
+	"encoding/json"
 	"io/ioutil"
 	"log"
 	"os"
@@ -12,13 +12,7 @@ import (
 
 type Cache struct {
 	Paths   map[string]Path
-	History []string
-}
-
-type Path struct {
-	Dir   string
-	Execs []string
-	Mtime int64
+	History History
 }
 
 func (cache *Cache) where() string {
@@ -30,7 +24,7 @@ func (cache *Cache) where() string {
 
 	// Per the freedesktop spec, non-existent directories should be created 0700
 	os.MkdirAll(cacheDir, 0700)
-	cacheName := filepath.Join(cacheDir, "gorn.msgpack")
+	cacheName := filepath.Join(cacheDir, "gorn.json")
 
 	return cacheName
 }
@@ -41,7 +35,7 @@ func (cache *Cache) Write() {
 	// serialize previous input list and write
 	// serialize paths and write
 	out, _ := os.Create(cacheName)
-	enc := msgpack.NewEncoder(out)
+	enc := json.NewEncoder(out)
 	enc.Encode(&cache)
 }
 
@@ -50,8 +44,65 @@ func (cache *Cache) Read() {
 
 	// Read the cache
 	in, _ := os.Open(cacheName)
-	dec := msgpack.NewDecoder(in, nil)
+	dec := json.NewDecoder(in)
 	dec.Decode(&cache)
+
+	// Make sure the history map is up-to-date
+	cache.History.MakeMap()
+}
+
+type Path struct {
+	Dir   string
+	Execs []string
+	Mtime int64
+}
+
+type History struct {
+	// the canonical list
+	S []string
+	// a map to make lookups quicker
+	m map[string]int
+}
+
+func (h *History) Clean() {
+	// remove dead entries before serialization
+	var cleanHistory []string
+	for _, command := range h.S {
+		executable := strings.Split(command, " ")[0]
+		_, err := exec.LookPath(executable)
+		if err != nil {
+			log.Printf("Pruning lost command: %s\n", command)
+			continue
+		}
+		cleanHistory = append(cleanHistory, command)
+	}
+	h.S = cleanHistory
+}
+
+func (h *History) Add(s string) {
+	// since we only add once per run, we don't need to recalculate the map
+	// add to beginning of list		
+	newHistory := []string{s}
+	// if dmenu output in previous input
+	if i, ok := h.m[s]; ok {
+		// remove it
+		before := h.S[:i]
+		after := h.S[i+1:]
+		h.S = append(before, after...)
+	}
+	newHistory = append(newHistory, h.S...)
+	h.S = newHistory
+	log.Println(h.S)
+}
+
+func (h *History) MakeMap() {
+	// Only needs to be called once per run
+	// Populate history map
+	m := make(map[string]int)
+	h.m = m
+	for i, exec := range h.S {
+		h.m[exec] = i
+	}
 }
 
 func main() {
@@ -60,11 +111,6 @@ func main() {
 	cache.Read()
 
 	candidates := make(map[string]string)
-	// Populate history map
-	historyMap := make(map[string]int)
-	for i, exec := range cache.History {
-		historyMap[exec] = i
-	}
 
 	// Check timestamps of everything on $PATH. If the timestamp is newer,
 	// regenerate that path
@@ -90,17 +136,16 @@ func main() {
 		// now that the cache is up-to-date, read it and add to candidates
 		for _, exec := range cache.Paths[path].Execs {
 			// if it's not in previous input
-			if _, ok := historyMap[exec]; !ok {
+			if _, ok := cache.History.m[exec]; !ok {
 				// add it to candidates
 				candidates[exec] = exec
 			}
 		}
-
 	}
 
 	var input []string
 	// print previous input in order ...
-	for _, exec := range cache.History {
+	for _, exec := range cache.History.S {
 		input = append(input, exec)
 	}
 	// print candidates in any order
@@ -125,34 +170,9 @@ func main() {
 	prog := exec.Command(path, progParts[1:]...)
 	prog.Start()
 
-	// add to beginning of list
-	newHistory := []string{dmenuOut}
-	// if dmenu output in previous input
-	if i, ok := historyMap[dmenuOut]; ok {
-		// remove it
-		before := cache.History[:i]
-		after := cache.History[i+1:]
-		cache.History = append(before, after...)
-	}
-	cache.History = append(newHistory, cache.History...)
-	cache.History = cleanHistory(cache.History)
-
+	cache.History.Add(dmenuOut)
+	cache.History.Clean()
 	cache.Write()
-}
-
-func cleanHistory(oldHistory []string) []string {
-	// remove dead entries before serialization
-	var cleanHistory []string
-	for _, command := range oldHistory {
-		executable := strings.Split(command, " ")[0]
-		_, err := exec.LookPath(executable)
-		if err != nil {
-			log.Printf("Pruning lost command: %s\n", command)
-			continue
-		}
-		cleanHistory = append(cleanHistory, command)
-	}
-	return cleanHistory
 }
 
 func regenerate(pathname string) Path {
